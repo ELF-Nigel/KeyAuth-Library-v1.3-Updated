@@ -36,6 +36,7 @@ this repo keeps keyauth api behavior compatible while adding stronger local secu
 - restored xor key mask using numeric_limits max() call
 - changed tfa handleinput to void and fixed call sites
 - fixed windows min macro conflict in section compare
+- added injection compatibility toggle via env or compile flag
 - added release artifacts: `releases/library_x64.lib` and `releases/auth.hpp`
 - fixed unsafe web login reason-string lifetime bug
 - fixed optional path logic bug (`!path.empty()`)

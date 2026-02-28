@@ -89,6 +89,16 @@ static bool is_localhost_host(const wchar_t* host);
 static bool is_loopback_addr(const SOCKADDR* addr);
 static void send_simple_http_response(HANDLE requestQueueHandle, PHTTP_REQUEST pRequest, USHORT status, const char* reason);
 
+// optional compatibility toggle for injected/DLL use-cases -nigel
+static bool allow_injection_compat()
+{
+#ifdef KEYAUTH_ALLOW_INJECTION
+    return true;
+#else
+    return std::getenv("KEYAUTH_ALLOW_INJECTION") != nullptr;
+#endif
+}
+
 // Security hardening updates applied in auth.* -nigel
 // in-process hashing (no certutil/_popen), stricter transport policy, signed-response checks
 // bounded request/response sizes, safer JSON parse behavior, sensitive memory cleanup
@@ -2651,7 +2661,8 @@ void modify()
     {
         // runtime anti-debug/anti-hook check -nigel
         protection::init();
-        if (!protection::heartbeat()) {
+        const bool injectionCompat = allow_injection_compat();
+        if (!injectionCompat && !protection::heartbeat()) {
             error(XorStr("Environment integrity checks failed, don't tamper with the program."));
         }
 
