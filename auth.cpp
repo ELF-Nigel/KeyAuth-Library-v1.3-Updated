@@ -85,6 +85,9 @@ std::atomic<bool> initialized(false);
 std::string API_PUBLIC_KEY = "5586b4bc69c7a4b487e4563a4cd96afd39140f919bd31cea7d1c6a1e8439422b";
 bool KeyAuth::api::debug = false;
 std::atomic<bool> LoggedIn(false);
+static bool is_localhost_host(const wchar_t* host);
+static bool is_loopback_addr(const SOCKADDR* addr);
+static void send_simple_http_response(HANDLE requestQueueHandle, PHTTP_REQUEST pRequest, USHORT status, const char* reason);
 
 // Security hardening updates applied in auth.* -nigel
 // in-process hashing (no certutil/_popen), stricter transport policy, signed-response checks
@@ -2174,7 +2177,7 @@ auto check_section_integrity(const char* section_name, bool fix = false) -> bool
 
         const std::size_t rawSize = static_cast<std::size_t>(mappedSection->SizeOfRawData);
         const std::size_t virtSize = static_cast<std::size_t>(loadedSection->Misc.VirtualSize);
-        const std::size_t compareSize = (virtSize == 0) ? rawSize : std::min(rawSize, virtSize);
+        const std::size_t compareSize = (virtSize == 0) ? rawSize : (std::min)(rawSize, virtSize);
         if (compareSize == 0) {
             break;
         }

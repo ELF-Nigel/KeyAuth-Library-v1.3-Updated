@@ -35,6 +35,7 @@ this repo keeps keyauth api behavior compatible while adding stronger local secu
 - fixed xor key part cast to avoid msvc parse error
 - restored xor key mask using numeric_limits max() call
 - changed tfa handleinput to void and fixed call sites
+- fixed windows min macro conflict in section compare
 - fixed unsafe web login reason-string lifetime bug
 - fixed optional path logic bug (`!path.empty()`)
 - added suspicious module detection in modify loop
