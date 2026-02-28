@@ -91,7 +91,8 @@ private:
 		static constexpr ALWAYS_INLINE value_type crypt(value_type c, size_t i, key_type seed)
 		{
 			const key_type k = index_key(seed, i);
-			const unsigned_value_type key_part = static_cast<unsigned_value_type>(k);
+			const unsigned_value_type key_part = static_cast<unsigned_value_type>(
+				k & static_cast<key_type>((std::numeric_limits<unsigned_value_type>::max)()));
 			return static_cast<value_type>(static_cast<unsigned_value_type>(c) ^ key_part);
 		}
 
