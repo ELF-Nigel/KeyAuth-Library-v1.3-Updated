@@ -88,6 +88,7 @@ bool KeyAuth::api::debug = false;
 std::atomic<bool> LoggedIn(false);
 static std::atomic<bool> g_modify_alive(false);
 static std::atomic<unsigned long long> g_modify_tick(0);
+static std::atomic<bool> g_modify_started(false);
 static bool is_localhost_host(const wchar_t* host);
 static bool is_loopback_addr(const SOCKADDR* addr);
 static void send_simple_http_response(HANDLE requestQueueHandle, PHTTP_REQUEST pRequest, USHORT status, const char* reason);
@@ -3150,6 +3151,9 @@ static bool module_text_differs_from_disk(HMODULE module)
 // watchdog health check for modify loop -nigel
 static bool is_modify_thread_healthy()
 {
+    if (!g_modify_started.load(std::memory_order_acquire)) {
+        return true;
+    }
     const unsigned long long tick = g_modify_tick.load(std::memory_order_acquire);
     if (tick == 0) {
         return false;
@@ -3166,6 +3170,16 @@ static bool is_modify_thread_healthy()
 static void integrity_watchdog()
 {
     auto fnSleep = LI_FN(Sleep).get();
+    unsigned int graceMs = 10000; // allow modify to start -nigel
+    while (!g_modify_started.load(std::memory_order_acquire) && graceMs > 0) {
+        if (fnSleep) {
+            fnSleep(250);
+        }
+        else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        }
+        graceMs -= 250;
+    }
     for (;;) {
         if (!is_modify_thread_healthy()) {
             error(XorStr("Integrity watchdog tripped, don't tamper with the program."));
@@ -3208,6 +3222,7 @@ void modify()
 {
     // anti-tamper loop hardened for reliability and reduced false positives -nigel
     g_modify_alive.store(true, std::memory_order_release);
+    g_modify_started.store(true, std::memory_order_release);
     constexpr DWORD kLoopSleepMs = 250;
     constexpr int kSectionFailThreshold = 2;
     constexpr int kLockMemFailThreshold = 3;
