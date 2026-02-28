@@ -11,6 +11,7 @@
 #endif
 
 #define _CRT_SECURE_NO_WARNINGS
+#define KEYAUTH_DISABLE_LAZY_IMPORTS
 
 #include <auth.hpp>
 #include <strsafe.h> 
