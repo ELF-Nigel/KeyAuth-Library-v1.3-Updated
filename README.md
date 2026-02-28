@@ -58,6 +58,7 @@ this repo keeps keyauth api behavior compatible while adding stronger local secu
 - added heartbeat gate for repeated local environment checks
 - added safer pointer/context guards inside exception handler
 - added process checks for common hook/debug usermode modules
+- moved emulator windows api calls to lazy imports for import hiding
 
 ## build (windows)
 - open `library.sln` in visual studio

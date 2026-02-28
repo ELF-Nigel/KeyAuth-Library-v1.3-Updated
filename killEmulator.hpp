@@ -7,6 +7,7 @@
 #include <string>
 #include <algorithm>
 #include <mutex>
+#include <lazy_importer.hpp>
 
 // https://github.com/LiamG53
 
@@ -40,7 +41,12 @@ namespace protection
 		MODULEINFO info; // place holder for the information
 
 		// use this function in order to get the module information.
-		bool result = GetModuleInformation(GetCurrentProcess(), 
+		auto fnGetModuleInformation = LI_FN(GetModuleInformation).get();
+		auto fnGetCurrentProcess = LI_FN(GetCurrentProcess).get();
+		if (!fnGetModuleInformation || !fnGetCurrentProcess) {
+			return false;
+		}
+		bool result = fnGetModuleInformation(fnGetCurrentProcess(),
 			module, &info, sizeof(info));
 		if (result)
 		{
@@ -62,7 +68,14 @@ namespace protection
 			L"ollydbg.exe", L"x64dbg.exe", L"ida64.exe"
 		};
 
-		HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+		auto fnCreateToolhelp32Snapshot = LI_FN(CreateToolhelp32Snapshot).get();
+		auto fnProcess32FirstW = LI_FN(Process32FirstW).get();
+		auto fnProcess32NextW = LI_FN(Process32NextW).get();
+		auto fnCloseHandle = LI_FN(CloseHandle).get();
+		if (!fnCreateToolhelp32Snapshot || !fnProcess32FirstW || !fnProcess32NextW || !fnCloseHandle) {
+			return false;
+		}
+		HANDLE snapshot = fnCreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 		if (snapshot == INVALID_HANDLE_VALUE)
 		{
 			return false;
@@ -71,7 +84,7 @@ namespace protection
 		PROCESSENTRY32W pe{};
 		pe.dwSize = sizeof(pe);
 		bool detected = false;
-		if (Process32FirstW(snapshot, &pe))
+		if (fnProcess32FirstW(snapshot, &pe))
 		{
 			do
 			{
@@ -84,18 +97,24 @@ namespace protection
 						break;
 					}
 				}
-			} while (!detected && Process32NextW(snapshot, &pe));
+			} while (!detected && fnProcess32NextW(snapshot, &pe));
 		}
 
-		CloseHandle(snapshot);
+		fnCloseHandle(snapshot);
 		return detected;
 	}
 
 	inline bool has_debugger()
 	{
 		BOOL remoteDebugger = FALSE;
-		CheckRemoteDebuggerPresent(GetCurrentProcess(), &remoteDebugger);
-		return IsDebuggerPresent() || remoteDebugger;
+		auto fnGetCurrentProcess = LI_FN(GetCurrentProcess).get();
+		auto fnCheckRemoteDebuggerPresent = LI_FN(CheckRemoteDebuggerPresent).get();
+		auto fnIsDebuggerPresent = LI_FN(IsDebuggerPresent).get();
+		if (!fnGetCurrentProcess || !fnCheckRemoteDebuggerPresent || !fnIsDebuggerPresent) {
+			return false;
+		}
+		fnCheckRemoteDebuggerPresent(fnGetCurrentProcess(), &remoteDebugger);
+		return fnIsDebuggerPresent() || remoteDebugger;
 	}
 
 	inline int environment_risk_score()
@@ -121,7 +140,8 @@ namespace protection
 
 		MEMORYSTATUSEX mem{};
 		mem.dwLength = sizeof(mem);
-		if (GlobalMemoryStatusEx(&mem))
+		auto fnGlobalMemoryStatusEx = LI_FN(GlobalMemoryStatusEx).get();
+		if (fnGlobalMemoryStatusEx && fnGlobalMemoryStatusEx(&mem))
 		{
 			const ULONGLONG twoGb = 2ull * 1024ull * 1024ull * 1024ull;
 			if (mem.ullTotalPhys < twoGb)
@@ -147,8 +167,9 @@ namespace protection
 		}
 
 		// place holder for the current module, in regards with our regional memory checks.
-		static auto current_module = 
-			GetModuleHandleA(0);
+		auto fnGetModuleHandleA = LI_FN(GetModuleHandleA).get();
+		static auto current_module =
+			(fnGetModuleHandleA ? fnGetModuleHandleA(0) : nullptr);
 		if (!current_module)
 		{
 			// throw a random page guard violation causing the application to most likely crash
@@ -218,7 +239,10 @@ namespace protection
 		static std::once_flag once;
 		std::call_once(once, []()
 		{
-			AddVectoredExceptionHandler(TRUE, reinterpret_cast<PVECTORED_EXCEPTION_HANDLER>(handler));
+			auto fnAddVectoredExceptionHandler = LI_FN(AddVectoredExceptionHandler).get();
+			if (fnAddVectoredExceptionHandler) {
+				fnAddVectoredExceptionHandler(TRUE, reinterpret_cast<PVECTORED_EXCEPTION_HANDLER>(handler));
+			}
 		});
 	}
 };
