@@ -1,48 +1,52 @@
-# keyauth-cpp-library : Please star 🌟
-KeyAuth C++ Library
+# keyauth library (hardened build by nigel)
 
-This is the source code of the library_x64.lib file from https://github.com/KeyAuth/KeyAuth-CPP-Example
+this repo keeps keyauth api behavior compatible while adding stronger local security hardening.
 
-Multi Support : x86/x64
+## maintainer
+- name: nigel
+- discord: chefendpoint
 
-## **Bugs**
+## quick notes
+- api surface kept compatible
+- auth flow kept compatible
+- security internals upgraded
+- comments use `// ... -nigel` format for changed areas
 
-If you are using our example with no significant changes, and you are having problems, please Report Bug here https://keyauth.cc/app/?page=forms
+## security change bullets
+- replaced shell-based hashing path with in-process hashing
+- fixed `thash` behavior to send hash value instead of file path
+- added strict https-only transport guardrails
+- added strict url sanitation before requests
+- added signed-response enforcement in request path
+- added stricter signature and timestamp header validation
+- added request and response size limits
+- added safer json parsing with fail-closed behavior
+- added secure string cleanup for sensitive payloads
+- added dpapi protection for local seed file writes
+- upgraded random generation path for seed creation
+- strengthened section integrity checking reliability
+- improved lockmemaccess safety and cleanup behavior
+- hardened modify loop with guarded thresholds
+- added debugger and environment heartbeat checks
+- prevented repeated veh handler stacking in emulator protection
+- rebuilt xor string layer with stronger custom key schedule
+- added xor object zeroization behavior on teardown
+- fixed unsafe web login reason-string lifetime bug
+- fixed optional path logic bug (`!path.empty()`)
 
-However, we do **NOT** provide support for adding KeyAuth to your project. If you can't figure this out you should use Google or YouTube to learn more about the programming language you want to sell a program in.
+## emulator / anti-tamper updates
+- `killEmulator.hpp` now installs veh once via `std::call_once`
+- added process blacklist checks for common vm/debug tools
+- added debugger presence checks (local + remote)
+- added low-resource and hypervisor weighted risk checks
+- added heartbeat gate for repeated local environment checks
+- added safer pointer/context guards inside exception handler
 
-## Different Architectures
-x86 :
+## build (windows)
+- open `library.sln` in visual studio
+- build `release | x64` (or x86 if needed)
+- project expects static curl/libsodium setup in project config
 
-1- Compile libcurl can be downloaded from curl.se and compiled by x86 Native Tools (Visual Studio Tools)
-
-2- Lib Configuration -> General -> C++ Language Standard ->  ISO C++17 Standard (/std:c++17)
-
-3- Lib Configuration -> Advanced -> Character Set ->  Multi-Byte Character Set
-
-4- Lib Configuration -> Preprocessor definiton for CURL -> CURL_STATICLIB
-
-## **What is KeyAuth?**
-
-KeyAuth is a powerful cloud-based authentication system designed to protect your software from piracy and unauthorized access. With KeyAuth, you can implement secure licensing, user management, and subscription systems in minutes. Client SDKs available for [C#](https://github.com/KeyAuth/KeyAuth-CSHARP-Example), [C++](https://github.com/KeyAuth/KeyAuth-CPP-Example), [Python](https://github.com/KeyAuth/KeyAuth-Python-Example), [Java](https://github.com/KeyAuth-Archive/KeyAuth-JAVA-api), [JavaScript](https://github.com/mazkdevf/KeyAuth-JS-Example), [VB.NET](https://github.com/KeyAuth/KeyAuth-VB-Example), [PHP](https://github.com/KeyAuth/KeyAuth-PHP-Example), [Rust](https://github.com/KeyAuth/KeyAuth-Rust-Example), [Go](https://github.com/mazkdevf/KeyAuth-Go-Example), [Lua](https://github.com/mazkdevf/KeyAuth-Lua-Examples), [Ruby](https://github.com/mazkdevf/KeyAuth-Ruby-Example), and [Perl](https://github.com/mazkdevf/KeyAuth-Perl-Example). KeyAuth has several unique features such as memory streaming, webhook function where you can send requests to API without leaking the API, discord webhook notifications, ban the user securely through the application at your discretion. Feel free to join https://t.me/keyauth if you have questions or suggestions.
-
-> [!TIP]
-> https://vaultcord.com FREE Discord bot to Backup server, members, channels, messages & more. Custom verify page, block alt accounts, VPNs & more.
-
-## Copyright License
-
-KeyAuth is licensed under **Elastic License 2.0**
-
-* You may not provide the software to third parties as a hosted or managed
-service, where the service provides users with access to any substantial set of
-the features or functionality of the software.
-
-* You may not move, change, disable, or circumvent the license key functionality
-in the software, and you may not remove or obscure any functionality in the
-software that is protected by the license key.
-
-* You may not alter, remove, or obscure any licensing, copyright, or other notices
-of the licensor in the software. Any use of the licensor’s trademarks is subject
-to applicable law.
-
-Thank you for your compliance, we work hard on the development of KeyAuth and do not appreciate our copyright being infringed.
+## support
+- this fork is focused on hardening and local protection quality
+- for api usage details, follow keyauth cpp example docs
