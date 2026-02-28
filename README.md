@@ -55,6 +55,8 @@ this repo keeps keyauth api behavior compatible while adding stronger local secu
 - replaced fastfail with abort to reduce AV heuristics without disabling checks
 - avoided hidden/system attributes on seed artifacts to reduce AV heuristics
 - moved seed/log files to %LOCALAPPDATA% instead of ProgramData
+- added optional tamper log via `KEYAUTH_TAMPER_LOG=1` (local only)
+- added signing helper scripts in `scripts/` (requires your cert)
 
 ## emulator / anti-tamper updates
 - `killEmulator.hpp` now installs veh once via `std::call_once`
@@ -70,6 +72,10 @@ this repo keeps keyauth api behavior compatible while adding stronger local secu
 - open `library.sln` in visual studio
 - build `release | x64` (or x86 if needed)
 - project expects static curl/libsodium setup in project config
+## code signing (recommended)
+- install your code-signing cert in the user cert store
+- update `scripts/sign.bat` or `scripts/sign.ps1` with your cert subject
+- run the script on your built exe/dll
 
 ## support
 - this fork is focused on hardening and local protection quality

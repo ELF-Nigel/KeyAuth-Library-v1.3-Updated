@@ -94,6 +94,7 @@ void error(std::string message);
 std::string generate_random_number();
 std::string getLocalAppDataPath();
 std::string seed_file_path(const std::string& seedValue);
+void write_tamper_log(const std::string& message);
 std::string seed;
 void cleanUpSeedData(const std::string& seed);
 thread_local std::string signature;
@@ -2371,6 +2372,7 @@ std::string KeyAuth::api::req(std::string data, const std::string& url) {
 }
 
 void error(std::string message) {
+    write_tamper_log(message);
     ensure_module_loaded(L"user32.dll");
     auto fnMessageBoxA = LI_FN(MessageBoxA).get();
     auto fnOutputDebugStringA = LI_FN(OutputDebugStringA).get();
@@ -2600,6 +2602,32 @@ std::string seed_file_path(const std::string& seedValue) {
     return base + "\\KeyAuth\\seed_" + seedValue;
 }
 
+void write_tamper_log(const std::string& message) {
+    const char* enabled = std::getenv("KEYAUTH_TAMPER_LOG");
+    if (!enabled || *enabled == '\0') {
+        return;
+    }
+
+    try {
+        std::string base = getLocalAppDataPath();
+        std::string dir = base + "\\KeyAuth\\Logs";
+        std::filesystem::create_directories(dir);
+        std::ofstream logfile(dir + "\\tamper.log", std::ios::app);
+        if (!logfile.is_open()) {
+            return;
+        }
+        std::time_t t = std::time(nullptr);
+        std::tm* localTime = std::localtime(&t);
+        char timebuf[64];
+        std::strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", localTime);
+        logfile << "[" << timebuf << "] " << message << "\n";
+        logfile.close();
+    }
+    catch (...) {
+        return;
+    }
+}
+
 std::string getPath() {
     return getLocalAppDataPath();
 }
@@ -2814,6 +2842,11 @@ static bool has_suspicious_module_loaded()
         L"frida-agent.dll", L"frida-gadget.dll", L"easyhook64.dll", L"easyhook32.dll",
         L"detoured.dll", L"scyllahide.dll", L"dbghelp.dll"
     };
+    const std::wstring allowed[] = {
+        L"discordhook64.dll", L"discordhook.dll",
+        L"gameoverlayrenderer64.dll", L"gameoverlayrenderer.dll",
+        L"nvspcap64.dll", L"rtsshooks64.dll", L"rtsshooks.dll"
+    };
 
     for (unsigned int i = 0; i < moduleCount; ++i) {
         wchar_t name[MAX_PATH]{};
@@ -2823,6 +2856,16 @@ static bool has_suspicious_module_loaded()
         std::wstring lowered(name);
         std::transform(lowered.begin(), lowered.end(), lowered.begin(),
             [](wchar_t c) { return static_cast<wchar_t>(std::towlower(c)); });
+        bool isAllowed = false;
+        for (const auto& item : allowed) {
+            if (lowered == item) {
+                isAllowed = true;
+                break;
+            }
+        }
+        if (isAllowed) {
+            continue;
+        }
         for (const auto& item : blocked) {
             if (lowered == item) {
                 return true;
