@@ -52,6 +52,7 @@ this repo keeps keyauth api behavior compatible while adding stronger local secu
 - added advanced anti-attach checks (ntdll debug flags) and system module integrity checks
 - replaced watchdog with multi-point integrity pulses in init/req/modify
 - added ntdll export hook detection for common inline trampolines
+- added `KEYAUTH_DISABLE_LAZY_IMPORTS` build flag to bypass lazy importer for debugging
 
 ## emulator / anti-tamper updates
 - `killEmulator.hpp` now installs veh once via `std::call_once`

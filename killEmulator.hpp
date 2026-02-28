@@ -8,6 +8,16 @@
 #include <algorithm>
 #include <mutex>
 #include <lazy_importer.hpp>
+#ifdef KEYAUTH_DISABLE_LAZY_IMPORTS
+// disable lazy imports for debugging stability checks -nigel
+template <typename T>
+struct KeyauthDirectFn {
+    T* ptr;
+    T* get() const { return ptr; }
+};
+#undef LI_FN
+#define LI_FN(name) KeyauthDirectFn<decltype(&name)>{ &name }
+#endif
 
 // https://github.com/LiamG53
 
