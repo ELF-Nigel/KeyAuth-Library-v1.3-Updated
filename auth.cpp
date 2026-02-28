@@ -23,13 +23,15 @@
 #include <lazy_importer.hpp>
 #ifdef KEYAUTH_DISABLE_LAZY_IMPORTS
 // disable lazy imports for debugging stability checks -nigel
-template <typename T>
+#ifndef KEYAUTH_DIRECT_LI_DEFINED
+#define KEYAUTH_DIRECT_LI_DEFINED
+template <auto Fn>
 struct KeyauthDirectFn {
-    T* ptr;
-    T* get() const { return ptr; }
+    auto get() const { return Fn; }
 };
+#endif
 #undef LI_FN
-#define LI_FN(name) KeyauthDirectFn<decltype(&name)>{ &name }
+#define LI_FN(name) KeyauthDirectFn<&name>{}
 #endif
 
 #include <sstream> 
