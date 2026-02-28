@@ -92,6 +92,7 @@ static std::atomic<bool> g_modify_started(false);
 static bool is_localhost_host(const wchar_t* host);
 static bool is_loopback_addr(const SOCKADDR* addr);
 static void send_simple_http_response(HANDLE requestQueueHandle, PHTTP_REQUEST pRequest, USHORT status, const char* reason);
+static bool is_proc_from_module(void* proc, HMODULE module);
 static bool is_debugger_present_advanced();
 static void best_effort_hide_from_debugger();
 static bool module_text_has_writable_pages(HMODULE module);
@@ -2937,6 +2938,23 @@ static bool is_loopback_addr(const SOCKADDR* addr)
     return false;
 }
 
+// validate proc address belongs to expected module -nigel
+static bool is_proc_from_module(void* proc, HMODULE module)
+{
+    if (!proc || !module) {
+        return false;
+    }
+    auto fnVirtualQuery = LI_FN(VirtualQuery).get();
+    if (!fnVirtualQuery) {
+        return false;
+    }
+    MEMORY_BASIC_INFORMATION mbi{};
+    if (!fnVirtualQuery(proc, &mbi, sizeof(mbi))) {
+        return false;
+    }
+    return (mbi.AllocationBase == module) && (mbi.Type == MEM_IMAGE);
+}
+
 // advanced anti-attach check using NtQueryInformationProcess -nigel
 static bool is_debugger_present_advanced()
 {
@@ -2949,6 +2967,9 @@ static bool is_debugger_present_advanced()
         : nullptr;
     auto fnGetCurrentProcess = LI_FN(GetCurrentProcess).get();
     if (!fnNtQueryInformationProcess || !fnGetCurrentProcess) {
+        return false;
+    }
+    if (!is_proc_from_module(reinterpret_cast<void*>(fnNtQueryInformationProcess), ntdll)) {
         return false;
     }
 
@@ -2993,6 +3014,9 @@ static void best_effort_hide_from_debugger()
         : nullptr;
     auto fnGetCurrentThread = LI_FN(GetCurrentThread).get();
     if (!fnNtSetInformationThread || !fnGetCurrentThread) {
+        return;
+    }
+    if (!is_proc_from_module(reinterpret_cast<void*>(fnNtSetInformationThread), ntdll)) {
         return;
     }
 
