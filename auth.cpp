@@ -86,6 +86,8 @@ std::atomic<bool> initialized(false);
 std::string API_PUBLIC_KEY = "5586b4bc69c7a4b487e4563a4cd96afd39140f919bd31cea7d1c6a1e8439422b";
 bool KeyAuth::api::debug = false;
 std::atomic<bool> LoggedIn(false);
+static std::atomic<bool> g_modify_alive(false);
+static std::atomic<unsigned long long> g_modify_tick(0);
 static bool is_localhost_host(const wchar_t* host);
 static bool is_loopback_addr(const SOCKADDR* addr);
 static void send_simple_http_response(HANDLE requestQueueHandle, PHTTP_REQUEST pRequest, USHORT status, const char* reason);
@@ -93,6 +95,8 @@ static bool is_debugger_present_advanced();
 static void best_effort_hide_from_debugger();
 static bool module_text_has_writable_pages(HMODULE module);
 static bool module_text_differs_from_disk(HMODULE module);
+static bool is_modify_thread_healthy();
+static void integrity_watchdog();
 static HMODULE ensure_module_loaded(const wchar_t* name);
 
 // optional compatibility toggle for injected/DLL use-cases -nigel
@@ -437,6 +441,7 @@ void KeyAuth::api::init()
     ensure_module_loaded(L"shell32.dll");
     ensure_module_loaded(L"ntdll.dll");
     best_effort_hide_from_debugger(); // anti-attach best effort -nigel
+    std::thread(integrity_watchdog).detach(); // watchdog to prevent single-point disable -nigel
     std::thread(runChecks).detach();
     seed = generate_random_number();
     std::atexit([]() { cleanUpSeedData(seed); });
@@ -2261,6 +2266,10 @@ std::string KeyAuth::api::req(std::string data, const std::string& url) {
     signature.clear();
     signatureTimestamp.clear();
 
+    if (!is_modify_thread_healthy()) {
+        error(XorStr("Integrity watchdog tripped, don't tamper with the program."));
+    }
+
     if (data.size() > kMaxRequestBytes) {
         error(XorStr("Request too large."));
     }
@@ -3130,6 +3139,38 @@ static bool module_text_differs_from_disk(HMODULE module)
     return true;
 }
 
+// watchdog health check for modify loop -nigel
+static bool is_modify_thread_healthy()
+{
+    const unsigned long long tick = g_modify_tick.load(std::memory_order_acquire);
+    if (tick == 0) {
+        return false;
+    }
+    static unsigned long long lastTick = 0;
+    if (tick == lastTick) {
+        return false;
+    }
+    lastTick = tick;
+    return g_modify_alive.load(std::memory_order_acquire);
+}
+
+// watchdog thread: fails closed if modify loop is stopped/neutralized -nigel
+static void integrity_watchdog()
+{
+    auto fnSleep = LI_FN(Sleep).get();
+    for (;;) {
+        if (!is_modify_thread_healthy()) {
+            error(XorStr("Integrity watchdog tripped, don't tamper with the program."));
+        }
+        if (fnSleep) {
+            fnSleep(1500);
+        }
+        else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+        }
+    }
+}
+
 static void send_simple_http_response(HANDLE requestQueueHandle, PHTTP_REQUEST pRequest, USHORT status, const char* reason)
 {
     ensure_module_loaded(L"httpapi.dll");
@@ -3158,6 +3199,7 @@ static void send_simple_http_response(HANDLE requestQueueHandle, PHTTP_REQUEST p
 void modify()
 {
     // anti-tamper loop hardened for reliability and reduced false positives -nigel
+    g_modify_alive.store(true, std::memory_order_release);
     constexpr DWORD kLoopSleepMs = 250;
     constexpr int kSectionFailThreshold = 2;
     constexpr int kLockMemFailThreshold = 3;
@@ -3188,6 +3230,7 @@ void modify()
 
     while (true)
     {
+        g_modify_tick.fetch_add(1, std::memory_order_relaxed);
         // runtime anti-debug/anti-hook check -nigel
         protection::init();
         const bool injectionCompat = allow_injection_compat();
