@@ -727,9 +727,10 @@ KeyAuth::api::Tfa& KeyAuth::api::Tfa::handleInput(KeyAuth::api& instance) {
 		std::string code;
 		std::cin >> code;
 
-		instance.disable2fa(code);
-	}
+			instance.disable2fa(code);
+		}
 
+    return instance.tfa;
 }
 
 void KeyAuth::api::web_login()
