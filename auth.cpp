@@ -92,6 +92,8 @@ void checkFiles();
 void checkRegistry();
 void error(std::string message);
 std::string generate_random_number();
+std::string getLocalAppDataPath();
+std::string seed_file_path(const std::string& seedValue);
 std::string seed;
 void cleanUpSeedData(const std::string& seed);
 thread_local std::string signature;
@@ -709,7 +711,7 @@ void KeyAuth::api::login(std::string username, std::string password, std::string
             if (api::response.message != XorStr("Initialized").c_str()) {
                 LI_FN(GlobalAddAtomA)(seed.c_str());
 
-                std::string file_path = XorStr("C:\\ProgramData\\").c_str() + seed;
+                std::string file_path = seed_file_path(seed);
                 if (!write_protected_seed_file(file_path, seed)) {
                     LI_FN(exit)(16);
                 }
@@ -1233,7 +1235,7 @@ void KeyAuth::api::web_login()
                 if (api::response.message != XorStr("Initialized").c_str()) {
                     LI_FN(GlobalAddAtomA)(seed.c_str());
 
-                    std::string file_path = XorStr("C:\\ProgramData\\").c_str() + seed;
+                    std::string file_path = seed_file_path(seed);
                     if (!write_protected_seed_file(file_path, seed)) {
                         LI_FN(exit)(16);
                     }
@@ -1502,7 +1504,7 @@ void KeyAuth::api::regstr(std::string username, std::string password, std::strin
             if (api::response.message != XorStr("Initialized").c_str()) {
                 LI_FN(GlobalAddAtomA)(seed.c_str());
 
-                std::string file_path = XorStr("C:\\ProgramData\\").c_str() + seed;
+                std::string file_path = seed_file_path(seed);
                 if (!write_protected_seed_file(file_path, seed)) {
                     LI_FN(exit)(16);
                 }
@@ -1641,7 +1643,7 @@ void KeyAuth::api::license(std::string key, std::string code) {
             if (api::response.message != XorStr("Initialized").c_str()) {
                 LI_FN(GlobalAddAtomA)(seed.c_str());
 
-                std::string file_path = XorStr("C:\\ProgramData\\").c_str() + seed;
+                std::string file_path = seed_file_path(seed);
                 if (!write_protected_seed_file(file_path, seed)) {
                     LI_FN(exit)(16);
                 }
@@ -2542,7 +2544,7 @@ void checkAtoms() {
 void checkFiles() {
 
     while (true) {
-        std::string file_path = XorStr("C:\\ProgramData\\").c_str() + seed;
+        std::string file_path = seed_file_path(seed);
         DWORD file_attr = LI_FN(GetFileAttributesA)(file_path.c_str());
         if (file_attr == INVALID_FILE_ATTRIBUTES || (file_attr & FILE_ATTRIBUTE_DIRECTORY)) {
             LI_FN(exit)(14);
@@ -2585,16 +2587,21 @@ std::string checksum()
     return md5_file_hex(std::string(rawPathName));
 }
 
+std::string getLocalAppDataPath() {
+    const char* localAppData = std::getenv("LOCALAPPDATA");
+    if (localAppData != nullptr) {
+        return std::string(localAppData);
+    }
+    return std::filesystem::current_path().string();
+}
+
+std::string seed_file_path(const std::string& seedValue) {
+    std::string base = getLocalAppDataPath();
+    return base + "\\KeyAuth\\seed_" + seedValue;
+}
+
 std::string getPath() {
-    const char* programDataPath = std::getenv("ALLUSERSPROFILE");
-
-    if (programDataPath != nullptr) {
-        return std::string(programDataPath);
-    }
-    else {
-
-        return std::filesystem::current_path().string();
-    }
+    return getLocalAppDataPath();
 }
 
 void RedactField(nlohmann::json& jsonObject, const std::string& fieldName)
@@ -2606,7 +2613,7 @@ void RedactField(nlohmann::json& jsonObject, const std::string& fieldName)
 }
 
 void KeyAuth::api::debugInfo(std::string data, std::string url, std::string response, std::string headers) {
-    // output debug logs to C:\ProgramData\KeyAuth\Debug
+    // output debug logs to %LOCALAPPDATA%\KeyAuth\Debug
 
     if (!KeyAuth::api::debug) {
         return;
@@ -3465,7 +3472,7 @@ void modify()
 void cleanUpSeedData(const std::string& seed) {
 
     // Clean up the seed file
-    std::string file_path = "C:\\ProgramData\\" + seed;
+    std::string file_path = seed_file_path(seed);
     if (std::filesystem::exists(file_path)) {
         std::filesystem::remove(file_path);
     }

@@ -54,6 +54,7 @@ this repo keeps keyauth api behavior compatible while adding stronger local secu
 - added ntdll export hook detection for common inline trampolines
 - replaced fastfail with abort to reduce AV heuristics without disabling checks
 - avoided hidden/system attributes on seed artifacts to reduce AV heuristics
+- moved seed/log files to %LOCALAPPDATA% instead of ProgramData
 
 ## emulator / anti-tamper updates
 - `killEmulator.hpp` now installs veh once via `std::call_once`
