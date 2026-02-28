@@ -31,6 +31,7 @@ this repo keeps keyauth api behavior compatible while adding stronger local secu
 - prevented repeated veh handler stacking in emulator protection
 - rebuilt xor string layer with stronger custom key schedule
 - added xor object zeroization behavior on teardown
+- fixed xor constructor init list to avoid msvc initializer error
 - fixed unsafe web login reason-string lifetime bug
 - fixed optional path logic bug (`!path.empty()`)
 - added suspicious module detection in modify loop

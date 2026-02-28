@@ -40,8 +40,8 @@ class _Basic_XorStr
 public:
 	constexpr ALWAYS_INLINE _Basic_XorStr(value_type const (&str)[_length])
 		: _seed(derive_seed(str, std::make_index_sequence<_length_minus_one>())),
-		_data{ crypt(str[0], 0, _seed), '\0' },
-		_cache{ '\0' },
+		_data{},
+		_cache{},
 		_cache_ready(false)
 	{
 		init_data(str, std::make_index_sequence<_length_minus_one>());
