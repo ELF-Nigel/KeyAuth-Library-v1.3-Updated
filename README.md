@@ -38,6 +38,8 @@ this repo keeps keyauth api behavior compatible while adding stronger local secu
 - fixed windows min macro conflict in section compare
 - fixed remaining std::min macro conflicts in section helpers
 - added injection compatibility toggle via env or compile flag
+- hardened process defaults (dll search path + heap corruption termination)
+- hardened seed file attributes (hidden/system/not indexed)
 - added release artifacts: `releases/library_x64.lib` and `releases/auth.hpp` > Outdated, you need to rebuild from repo
 - fixed unsafe web login reason-string lifetime bug
 - fixed optional path logic bug (`!path.empty()`)

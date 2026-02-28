@@ -99,6 +99,26 @@ static bool allow_injection_compat()
 #endif
 }
 
+static void harden_process_defaults()
+{
+    // harden dll search path and heap corruption behavior without API changes -nigel
+    HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+    if (kernel32) {
+        auto set_default_dirs = reinterpret_cast<BOOL(WINAPI*)(DWORD)>(
+            GetProcAddress(kernel32, "SetDefaultDllDirectories"));
+        if (set_default_dirs) {
+            set_default_dirs(LOAD_LIBRARY_SEARCH_SYSTEM32 | LOAD_LIBRARY_SEARCH_USER_DIRS);
+        }
+        auto set_dll_dir = reinterpret_cast<BOOL(WINAPI*)(LPCWSTR)>(
+            GetProcAddress(kernel32, "SetDllDirectoryW"));
+        if (set_dll_dir) {
+            set_dll_dir(L"");
+        }
+    }
+
+    HeapSetInformation(GetProcessHeap(), HeapEnableTerminationOnCorruption, nullptr, 0);
+}
+
 // Security hardening updates applied in auth.* -nigel
 // in-process hashing (no certutil/_popen), stricter transport policy, signed-response checks
 // bounded request/response sizes, safer JSON parse behavior, sensitive memory cleanup
@@ -276,6 +296,9 @@ namespace {
         file.close();
         const bool ok = file.good();
 
+        // reduce casual discovery of seed artifacts -nigel
+        SetFileAttributesA(filePath.c_str(), FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED);
+
         if (encryptedBlob.pbData && encryptedBlob.cbData > 0) {
             SecureZeroMemory(encryptedBlob.pbData, encryptedBlob.cbData);
         }
@@ -323,6 +346,9 @@ void KeyAuth::api::init()
     seed = generate_random_number();
     std::atexit([]() { cleanUpSeedData(seed); });
     CreateThread(0, 0, (LPTHREAD_START_ROUTINE)modify, 0, 0, 0);
+    if (!allow_injection_compat()) {
+        harden_process_defaults();
+    }
 
     if (ownerid.length() != 10)
     {
